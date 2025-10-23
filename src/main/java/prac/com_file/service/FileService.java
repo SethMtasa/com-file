@@ -39,7 +39,7 @@ public interface FileService {
     // Add this method to the FileService interface
     ApiResponse<List<File>> getExpiringFilesEntities(int daysThreshold);
 
-
+    ApiResponse<List<FileResponseDto>> getFilesByAssignedKAROrUploadedBy(Long karUserId);
 
     ResponseEntity<Resource> downloadFile(Long fileId);
 }

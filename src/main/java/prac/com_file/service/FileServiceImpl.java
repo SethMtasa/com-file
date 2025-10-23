@@ -183,9 +183,9 @@ public class FileServiceImpl implements FileService {
             File savedFile = fileRepository.save(file);
             FileResponseDto responseDto = convertToDto(savedFile);
 
-            // ✅ Send file assignment notification to KAR
-          sendFileAssignmentNotification(savedFile, uploadedByUser.get());
 
+            // ✅ Send file assignment notification to KAR with comment
+            sendFileAssignmentNotification(savedFile, uploadedByUser.get(), fileRequestDto.getComment());
             return new ApiResponse<>(true, "File uploaded successfully", responseDto);
         } catch (Exception e) {
             e.printStackTrace(); // Better logging
@@ -277,6 +277,44 @@ public class FileServiceImpl implements FileService {
             }
         } catch (Exception e) {
             return new ApiResponse<>(false, "Failed to retrieve expiring files: " + e.getMessage(), null);
+        }
+    }
+
+    @Override
+    public ApiResponse<List<FileResponseDto>> getFilesByAssignedKAROrUploadedBy(Long karUserId) {
+        try {
+            // Validate user exists
+            Optional<User> karUser = userRepository.findById(karUserId);
+            if (karUser.isEmpty()) {
+                return new ApiResponse<>(false, "User not found with ID: " + karUserId, null);
+            }
+
+            List<File> files = fileRepository.findFilesByAssignedKAROrUploadedBy(karUserId);
+
+            if (!files.isEmpty()) {
+                List<FileResponseDto> fileDtos = files.stream()
+                        .map(this::convertToDto)
+                        .collect(Collectors.toList());
+
+                // Count files by type for the response message
+                long assignedFiles = files.stream()
+                        .filter(file -> file.getAssignedKAR().getId().equals(karUserId))
+                        .count();
+                long uploadedFiles = files.stream()
+                        .filter(file -> file.getUploadedBy().getId().equals(karUserId))
+                        .count();
+
+                String message = String.format(
+                        "Files retrieved successfully. Assigned: %d, Uploaded: %d, Total: %d",
+                        assignedFiles, uploadedFiles, files.size()
+                );
+
+                return new ApiResponse<>(true, message, fileDtos);
+            } else {
+                return new ApiResponse<>(false, "No files found for user ID: " + karUserId, null);
+            }
+        } catch (Exception e) {
+            return new ApiResponse<>(false, "Failed to retrieve files: " + e.getMessage(), null);
         }
     }
 
@@ -447,7 +485,9 @@ public class FileServiceImpl implements FileService {
 
             // ✅ Send notification if KAR assignment changed
             if (karChanged) {
-                sendFileAssignmentNotification(updatedFile, updatedByUser);
+                String comment = fileRequestDto.getComment() != null ?
+                        fileRequestDto.getComment() : "File reassigned to you. Please review.";
+                sendFileAssignmentNotification(updatedFile, updatedByUser, comment);
             }
 
             return new ApiResponse<>(true, "File updated successfully", convertToDto(updatedFile));
@@ -536,7 +576,10 @@ public class FileServiceImpl implements FileService {
     /**
      * Sends notification to KAR when a file is assigned to them
      */
-    private void sendFileAssignmentNotification(File file, User uploadedBy) {
+    /**
+     * Sends notification to KAR when a file is assigned to them
+     */
+    private void sendFileAssignmentNotification(File file, User uploadedBy, String comment) {
         try {
             // Create notification record
             fileNotificationService.createNotification(
@@ -553,6 +596,8 @@ public class FileServiceImpl implements FileService {
                                     "• Channel Partner Type: %s\n" +
                                     "• Upload Date: %s\n" +
                                     "• Expiry Date: %s\n\n" +
+                                    "Instructions from Uploader:\n" +
+                                    "%s\n\n" +
                                     "Please review the file and ensure it meets all requirements.",
                             uploadedBy.getFirstName(),
                             uploadedBy.getLastName(),
@@ -561,12 +606,13 @@ public class FileServiceImpl implements FileService {
                             file.getRegion().getRegionName(),
                             file.getChannelPartnerType().getTypeName(),
                             file.getUploadDate().toString(),
-                            file.getExpiryDate().toString()
+                            file.getExpiryDate().toString(),
+                            comment
                     ),
                     null // No days until expiry for assignments
             );
 
-            // Send email notification
+            // Send email notification - FIXED: Added comment parameter
             if (file.getAssignedKAR().getEmail() != null) {
                 boolean emailSent = emailService.sendFileAssignmentNotification(
                         file.getAssignedKAR().getEmail(),
@@ -576,7 +622,8 @@ public class FileServiceImpl implements FileService {
                         file.getRegion().getRegionName(),
                         file.getChannelPartnerType().getTypeName(),
                         file.getExpiryDate().toString(),
-                        file.getFileUrl()
+                        file.getFileUrl(),
+                        comment // ADDED: This was missing
                 );
 
                 if (emailSent) {

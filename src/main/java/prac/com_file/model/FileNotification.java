@@ -20,9 +20,7 @@ public class FileNotification extends BaseEntity {
     }
 
     public enum NotificationStatus {
-        PENDING,
         SENT,
-        READ,
         FAILED
     }
 
@@ -44,7 +42,7 @@ public class FileNotification extends BaseEntity {
 
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
-    private NotificationStatus status = NotificationStatus.PENDING;
+    private NotificationStatus status = NotificationStatus.FAILED; // Default to FAILED
 
     @Column(name = "days_until_expiry")
     private Integer daysUntilExpiry;
@@ -71,6 +69,7 @@ public class FileNotification extends BaseEntity {
         this.scheduledTime = scheduledTime;
         this.file = file;
         this.targetUser = targetUser;
+        this.status = NotificationStatus.FAILED; // Default to FAILED in parameterized constructor
     }
 
     // Getters and Setters
@@ -146,19 +145,13 @@ public class FileNotification extends BaseEntity {
         this.targetUser = targetUser;
     }
 
-    // Business logic methods
+    // Business logic methods - Only keep markAsSent since we don't have READ status anymore
     public void markAsSent() {
         this.status = NotificationStatus.SENT;
         this.sentTime = LocalDateTime.now();
     }
 
-    public void markAsRead() {
-        this.status = NotificationStatus.READ;
-    }
-
-    public boolean isPending() {
-        return this.status == NotificationStatus.PENDING;
-    }
+    // Removed markAsRead() and isPending() methods since we only have SENT and FAILED statuses
 
     @Override
     public boolean equals(Object o) {
@@ -184,6 +177,7 @@ public class FileNotification extends BaseEntity {
                 ", title='" + title + '\'' +
                 ", status=" + status +
                 ", scheduledTime=" + scheduledTime +
+                ", sentTime=" + sentTime +
                 '}';
     }
 
@@ -192,7 +186,9 @@ public class FileNotification extends BaseEntity {
         public static final String TITLE = "title";
         public static final String STATUS = "status";
         public static final String SCHEDULED_TIME = "scheduledTime";
+        public static final String SENT_TIME = "sentTime";
         public static final String FILE = "file";
         public static final String TARGET_USER = "targetUser";
+        public static final String DAYS_UNTIL_EXPIRY = "daysUntilExpiry";
     }
 }

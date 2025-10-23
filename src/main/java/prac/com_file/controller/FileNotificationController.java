@@ -38,25 +38,14 @@ public class FileNotificationController {
 
     @GetMapping("/status/{status}")
     public ResponseEntity<ApiResponse<List<FileNotificationResponseDto>>> getNotificationsByStatus(@PathVariable String status) {
+        // Validate that only SENT or FAILED status is requested
+        if (!status.equalsIgnoreCase("SENT") && !status.equalsIgnoreCase("FAILED")) {
+            ApiResponse<List<FileNotificationResponseDto>> errorResponse =
+                    new ApiResponse<>(false, "Invalid status. Only 'SENT' and 'FAILED' are supported.", null);
+            return ResponseEntity.status(400).body(errorResponse);
+        }
+
         ApiResponse<List<FileNotificationResponseDto>> response = fileNotificationService.getNotificationsByStatus(status);
-        return ResponseEntity.status(response.success() ? 200 : 404).body(response);
-    }
-
-    @GetMapping("/pending")
-    public ResponseEntity<ApiResponse<List<FileNotificationResponseDto>>> getPendingNotifications() {
-        ApiResponse<List<FileNotificationResponseDto>> response = fileNotificationService.getPendingNotifications();
-        return ResponseEntity.status(response.success() ? 200 : 404).body(response);
-    }
-
-    @PutMapping("/{id}/mark-read")
-    public ResponseEntity<ApiResponse<FileNotificationResponseDto>> markNotificationAsRead(@PathVariable Long id) {
-        ApiResponse<FileNotificationResponseDto> response = fileNotificationService.markNotificationAsRead(id);
-        return ResponseEntity.status(response.success() ? 200 : 404).body(response);
-    }
-
-    @PutMapping("/user/{userId}/mark-all-read")
-    public ResponseEntity<ApiResponse<String>> markAllNotificationsAsRead(@PathVariable Long userId) {
-        ApiResponse<String> response = fileNotificationService.markAllNotificationsAsRead(userId);
         return ResponseEntity.status(response.success() ? 200 : 404).body(response);
     }
 
@@ -72,9 +61,21 @@ public class FileNotificationController {
         return ResponseEntity.status(response.success() ? 200 : 404).body(response);
     }
 
-    @GetMapping("/user/{userId}/unread-count")
-    public ResponseEntity<ApiResponse<Long>> getUnreadNotificationCount(@PathVariable Long userId) {
-        ApiResponse<Long> response = fileNotificationService.getUnreadNotificationCount(userId);
+    @GetMapping("/expiry-reminders/{days}")
+    public ResponseEntity<ApiResponse<List<FileNotificationResponseDto>>> getExpiryRemindersByDays(@PathVariable Integer days) {
+        ApiResponse<List<FileNotificationResponseDto>> response = fileNotificationService.getExpiryRemindersByDays(days);
+        return ResponseEntity.status(response.success() ? 200 : 404).body(response);
+    }
+
+    @DeleteMapping("/cleanup/{daysOld}")
+    public ResponseEntity<ApiResponse<String>> cleanupOldNotifications(@PathVariable int daysOld) {
+        ApiResponse<String> response = fileNotificationService.cleanupOldNotifications(daysOld);
+        return ResponseEntity.status(response.success() ? 200 : 404).body(response);
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<FileNotificationResponseDto>>> getAllNotifications() {
+        ApiResponse<List<FileNotificationResponseDto>> response = fileNotificationService.getAllNotifications();
         return ResponseEntity.status(response.success() ? 200 : 404).body(response);
     }
 }

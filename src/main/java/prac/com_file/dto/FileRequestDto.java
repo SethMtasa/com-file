@@ -30,7 +30,11 @@ public class FileRequestDto {
     @NotNull(message = "Assigned KAR user ID is required")
     private Long assignedKarUserId;
 
-    // Getters and Setters - MAKE SURE THESE EXIST AND ARE CORRECTLY NAMED
+    // NEW: Comment field for email notification (not saved in DB)
+    @NotBlank(message = "Comment is required for the assigned KAR")
+    private String comment;
+
+    // Getters and Setters
     public MultipartFile getFile() {
         return file;
     }
@@ -93,5 +97,14 @@ public class FileRequestDto {
 
     public void setAssignedKarUserId(Long assignedKarUserId) {
         this.assignedKarUserId = assignedKarUserId;
+    }
+
+    // NEW: Getter and setter for comment
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
     }
 }

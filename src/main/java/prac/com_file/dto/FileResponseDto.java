@@ -17,6 +17,7 @@ public class FileResponseDto {
     private String description;
     private boolean expired;
     private boolean valid;
+    private Long version;
 
     // Nested DTOs for related entities
     private UserResponseDto uploadedBy;
@@ -95,6 +96,14 @@ public class FileResponseDto {
 
     public void setFileVersion(String fileVersion) {
         this.fileVersion = fileVersion;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public String getDescription() {

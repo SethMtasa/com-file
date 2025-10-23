@@ -145,4 +145,13 @@ public class FileController {
     public ResponseEntity<Resource> downloadFile(@PathVariable Long id) {
         return fileService.downloadFile(id);
     }
+
+    @GetMapping("/user/{karUserId}/all")
+    public ResponseEntity<ApiResponse<List<FileResponseDto>>> getFilesByAssignedKAROrUploadedBy(
+            @PathVariable Long karUserId) {
+
+        ApiResponse<List<FileResponseDto>> response = fileService.getFilesByAssignedKAROrUploadedBy(karUserId);
+        return ResponseEntity.status(response.success() ? 200 : 404).body(response);
+    }
+
 }

@@ -51,10 +51,15 @@ public class SecurityConfig {
 
                                         "/users/{id}",
                                         "/users/update/{id}",
-                                        "/users/delete/{id}",
-                                        "/users"
+                                        "/users/delete/{id}"
 
                                 ).hasRole("ADMIN")
+
+                                .requestMatchers(
+
+                                        "/users"
+
+                                ).hasAnyRole("ADMIN", "USER")
 
                                 // File Management - Different access levels
                                 .requestMatchers(
@@ -65,7 +70,7 @@ public class SecurityConfig {
                                 ).hasAnyRole("ADMIN", "USER")
 
                                 .requestMatchers(
-                                        "/api/files",
+                                        "/api/files/**",
                                         "/api/files/{id}",
                                         "/api/files/search",
                                         "/api/files/expiring/**",

@@ -21,7 +21,7 @@ public class FileNotificationServiceImpl implements FileNotificationService {
     private final FileNotificationRepository fileNotificationRepository;
     private final FileRepository fileRepository;
     private final UserRepository userRepository;
-    private final EmailService emailService; // Assuming you have an email service
+    private final EmailService emailService;
 
     public FileNotificationServiceImpl(FileNotificationRepository fileNotificationRepository,
                                        FileRepository fileRepository,
@@ -44,10 +44,26 @@ public class FileNotificationServiceImpl implements FileNotificationService {
             notification.setTitle(title);
             notification.setMessage(message);
             notification.setScheduledTime(LocalDateTime.now());
-            notification.setStatus(FileNotification.NotificationStatus.PENDING);
             notification.setDaysUntilExpiry(daysUntilExpiry);
             notification.setFile(file);
             notification.setTargetUser(targetUser);
+
+            // Try to send email immediately and set status accordingly
+            try {
+                boolean emailSent = emailService.sendNotificationEmail(
+                        targetUser.getEmail(),
+                        title,
+                        message
+                );
+
+                if (emailSent) {
+                    notification.markAsSent(); // This sets status to SENT and sentTime
+                } else {
+                    notification.setStatus(FileNotification.NotificationStatus.FAILED);
+                }
+            } catch (Exception e) {
+                notification.setStatus(FileNotification.NotificationStatus.FAILED);
+            }
 
             FileNotification savedNotification = fileNotificationRepository.save(notification);
             FileNotificationResponseDto responseDto = convertToDto(savedNotification);
@@ -70,14 +86,29 @@ public class FileNotificationServiceImpl implements FileNotificationService {
             notification.setTitle(title);
             notification.setMessage(message);
             notification.setScheduledTime(LocalDateTime.now());
-            notification.setStatus(FileNotification.NotificationStatus.PENDING);
             notification.setDaysUntilExpiry(daysUntilExpiry);
             notification.setFile(file);
             notification.setTargetUser(file.getAssignedKAR());
 
+            // Try to send email immediately
+            try {
+                boolean emailSent = emailService.sendNotificationEmail(
+                        file.getAssignedKAR().getEmail(),
+                        title,
+                        message
+                );
+
+                if (emailSent) {
+                    notification.markAsSent();
+                } else {
+                    notification.setStatus(FileNotification.NotificationStatus.FAILED);
+                }
+            } catch (Exception e) {
+                notification.setStatus(FileNotification.NotificationStatus.FAILED);
+            }
+
             fileNotificationRepository.save(notification);
         } catch (Exception e) {
-            // Log error but don't throw to avoid interrupting the main process
             System.err.println("Failed to create expiry notification: " + e.getMessage());
         }
     }
@@ -119,9 +150,15 @@ public class FileNotificationServiceImpl implements FileNotificationService {
     @Override
     public ApiResponse<List<FileNotificationResponseDto>> getActiveNotificationsByUser(Long userId) {
         try {
-            List<FileNotification> notifications = fileNotificationRepository.findActiveNotificationsByUser(userId);
-            if (!notifications.isEmpty()) {
-                List<FileNotificationResponseDto> notificationDtos = notifications.stream()
+            // Since we only have SENT and FAILED, show only SENT notifications as "active"
+            List<FileNotification> notifications = fileNotificationRepository.findByTargetUserIdOrderByScheduledTimeDesc(userId);
+
+            List<FileNotification> sentNotifications = notifications.stream()
+                    .filter(n -> n.getStatus() == FileNotification.NotificationStatus.SENT)
+                    .collect(Collectors.toList());
+
+            if (!sentNotifications.isEmpty()) {
+                List<FileNotificationResponseDto> notificationDtos = sentNotifications.stream()
                         .map(this::convertToDto)
                         .collect(Collectors.toList());
                 return new ApiResponse<>(true, "Active notifications retrieved successfully", notificationDtos);
@@ -149,64 +186,28 @@ public class FileNotificationServiceImpl implements FileNotificationService {
                 return new ApiResponse<>(false, "No notifications found with status: " + status, null);
             }
         } catch (IllegalArgumentException e) {
-            return new ApiResponse<>(false, "Invalid status: " + status, null);
+            return new ApiResponse<>(false, "Invalid status: " + status + ". Valid statuses: SENT, FAILED", null);
         } catch (Exception e) {
             return new ApiResponse<>(false, "Failed to retrieve notifications: " + e.getMessage(), null);
         }
     }
 
+    // REMOVED - No longer needed as there are no PENDING status
     @Override
     public ApiResponse<List<FileNotificationResponseDto>> getPendingNotifications() {
-        try {
-            List<FileNotification> notifications = fileNotificationRepository.findPendingNotifications(LocalDateTime.now());
-            if (!notifications.isEmpty()) {
-                List<FileNotificationResponseDto> notificationDtos = notifications.stream()
-                        .map(this::convertToDto)
-                        .collect(Collectors.toList());
-                return new ApiResponse<>(true, "Pending notifications retrieved successfully", notificationDtos);
-            } else {
-                return new ApiResponse<>(false, "No pending notifications found", null);
-            }
-        } catch (Exception e) {
-            return new ApiResponse<>(false, "Failed to retrieve pending notifications: " + e.getMessage(), null);
-        }
+        return new ApiResponse<>(false, "This method is no longer supported. Notifications are sent immediately.", null);
     }
 
+    // REMOVED - No longer needed as there's no READ status
     @Override
     public ApiResponse<FileNotificationResponseDto> markNotificationAsRead(Long notificationId) {
-        try {
-            Optional<FileNotification> notificationOptional = fileNotificationRepository.findById(notificationId);
-            if (notificationOptional.isPresent()) {
-                FileNotification notification = notificationOptional.get();
-                notification.setStatus(FileNotification.NotificationStatus.READ);
-                FileNotification updatedNotification = fileNotificationRepository.save(notification);
-                return new ApiResponse<>(true, "Notification marked as read", convertToDto(updatedNotification));
-            } else {
-                return new ApiResponse<>(false, "Notification not found with ID: " + notificationId, null);
-            }
-        } catch (Exception e) {
-            return new ApiResponse<>(false, "Failed to mark notification as read: " + e.getMessage(), null);
-        }
+        return new ApiResponse<>(false, "This method is no longer supported. Use getNotificationById instead.", null);
     }
 
+    // REMOVED - No longer needed as there's no READ status
     @Override
     public ApiResponse<String> markAllNotificationsAsRead(Long userId) {
-        try {
-            List<FileNotification> notifications = fileNotificationRepository.findByTargetUserIdOrderByScheduledTimeDesc(userId);
-            List<FileNotification> unreadNotifications = notifications.stream()
-                    .filter(n -> n.getStatus() == FileNotification.NotificationStatus.SENT)
-                    .collect(Collectors.toList());
-
-            if (!unreadNotifications.isEmpty()) {
-                unreadNotifications.forEach(n -> n.setStatus(FileNotification.NotificationStatus.READ));
-                fileNotificationRepository.saveAll(unreadNotifications);
-                return new ApiResponse<>(true, "All notifications marked as read", null);
-            } else {
-                return new ApiResponse<>(false, "No unread notifications found for user ID: " + userId, null);
-            }
-        } catch (Exception e) {
-            return new ApiResponse<>(false, "Failed to mark all notifications as read: " + e.getMessage(), null);
-        }
+        return new ApiResponse<>(false, "This method is no longer supported.", null);
     }
 
     @Override
@@ -237,54 +238,16 @@ public class FileNotificationServiceImpl implements FileNotificationService {
         }
     }
 
+    // REMOVED - No longer needed as there's no concept of "unread" notifications
     @Override
     public ApiResponse<Long> getUnreadNotificationCount(Long userId) {
-        try {
-            long count = fileNotificationRepository.countUnreadByUser(userId);
-            return new ApiResponse<>(true, "Unread notification count retrieved", count);
-        } catch (Exception e) {
-            return new ApiResponse<>(false, "Failed to get unread notification count: " + e.getMessage(), null);
-        }
+        return new ApiResponse<>(false, "This method is no longer supported.", 0L);
     }
 
+    // REMOVED - No longer needed as notifications are sent immediately
     @Override
     public ApiResponse<String> sendPendingNotifications() {
-        try {
-            List<FileNotification> pendingNotifications = fileNotificationRepository.findPendingNotifications(LocalDateTime.now());
-            int sentCount = 0;
-            int failedCount = 0;
-
-            for (FileNotification notification : pendingNotifications) {
-                try {
-                    // Send email notification
-                    boolean emailSent = emailService.sendNotificationEmail(
-                            notification.getTargetUser().getEmail(),
-                            notification.getTitle(),
-                            notification.getMessage()
-                    );
-
-                    if (emailSent) {
-                        notification.markAsSent();
-                        fileNotificationRepository.save(notification);
-                        sentCount++;
-                    } else {
-                        notification.setStatus(FileNotification.NotificationStatus.FAILED);
-                        fileNotificationRepository.save(notification);
-                        failedCount++;
-                    }
-                } catch (Exception e) {
-                    notification.setStatus(FileNotification.NotificationStatus.FAILED);
-                    fileNotificationRepository.save(notification);
-                    failedCount++;
-                    System.err.println("Failed to send notification " + notification.getId() + ": " + e.getMessage());
-                }
-            }
-
-            String message = String.format("Notification sending completed. Sent: %d, Failed: %d", sentCount, failedCount);
-            return new ApiResponse<>(true, message, null);
-        } catch (Exception e) {
-            return new ApiResponse<>(false, "Failed to send pending notifications: " + e.getMessage(), null);
-        }
+        return new ApiResponse<>(false, "This method is no longer supported. Notifications are sent immediately upon creation.", null);
     }
 
     @Override
@@ -319,6 +282,23 @@ public class FileNotificationServiceImpl implements FileNotificationService {
             }
         } catch (Exception e) {
             return new ApiResponse<>(false, "Failed to cleanup old notifications: " + e.getMessage(), null);
+        }
+    }
+
+    @Override
+    public ApiResponse<List<FileNotificationResponseDto>> getAllNotifications() {
+        try {
+            List<FileNotification> notifications = fileNotificationRepository.findAllByOrderByScheduledTimeDesc();
+            if (!notifications.isEmpty()) {
+                List<FileNotificationResponseDto> notificationDtos = notifications.stream()
+                        .map(this::convertToDto)
+                        .collect(Collectors.toList());
+                return new ApiResponse<>(true, "All notifications retrieved successfully", notificationDtos);
+            } else {
+                return new ApiResponse<>(false, "No notifications found", null);
+            }
+        } catch (Exception e) {
+            return new ApiResponse<>(false, "Failed to retrieve notifications: " + e.getMessage(), null);
         }
     }
 

@@ -100,7 +100,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public boolean sendFileAssignmentNotification(String karEmail, String fileName, String uploadedBy,
                                                   String description, String region, String channelPartnerType,
-                                                  String expiryDate, String fileUrl) {
+                                                  String expiryDate, String fileUrl, String comment) {
         try {
             String subject = "New File Assigned - Action Required";
             String message = String.format(
@@ -112,8 +112,9 @@ public class EmailServiceImpl implements EmailService {
                             "• Description: %s\n" +
                             "• Region: %s\n" +
                             "• Channel Partner Type: %s\n" +
-                            "• Expiry Date: %s\n" +
-//                            "• File URL: %s\n\n" +
+                            "• Expiry Date: %s\n\n" +
+                            "Instructions from Uploader:\n" +
+                            "%s\n\n" +
                             "Please review the file and ensure all details are correct. " +
                             "You are responsible for managing this file until its expiry date.\n\n" +
                             "Best regards,\n" +
@@ -124,7 +125,7 @@ public class EmailServiceImpl implements EmailService {
                     region,
                     channelPartnerType,
                     expiryDate,
-                    fileUrl
+                    comment
             );
 
             return sendNotificationEmail(karEmail, subject, message);
@@ -133,5 +134,4 @@ public class EmailServiceImpl implements EmailService {
             return false;
         }
     }
-
 }

@@ -74,4 +74,13 @@ public interface FileRepository extends JpaRepository<File, Long> {
 
     @Query("SELECT DISTINCT f.fileType FROM File f WHERE f.activeStatus = true")
     List<String> findDistinctFileTypes();
+
+
+        @Query("SELECT f FROM File f WHERE " +
+                "(f.assignedKAR.id = :karUserId OR f.uploadedBy.id = :karUserId) AND " +
+                "f.activeStatus = true " +
+                "ORDER BY f.uploadDate DESC")
+        List<File> findFilesByAssignedKAROrUploadedBy(@Param("karUserId") Long karUserId);
+
+
 }

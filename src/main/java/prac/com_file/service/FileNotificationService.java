@@ -42,4 +42,6 @@ public interface FileNotificationService {
     ApiResponse<List<FileNotificationResponseDto>> getExpiryRemindersByDays(Integer days);
 
     ApiResponse<String> cleanupOldNotifications(int daysOld);
+
+    ApiResponse<List<FileNotificationResponseDto>> getAllNotifications();
 }
