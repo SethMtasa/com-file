@@ -48,22 +48,9 @@ public class FileNotificationServiceImpl implements FileNotificationService {
             notification.setFile(file);
             notification.setTargetUser(targetUser);
 
-            // Try to send email immediately and set status accordingly
-            try {
-                boolean emailSent = emailService.sendNotificationEmail(
-                        targetUser.getEmail(),
-                        title,
-                        message
-                );
-
-                if (emailSent) {
-                    notification.markAsSent(); // This sets status to SENT and sentTime
-                } else {
-                    notification.setStatus(FileNotification.NotificationStatus.FAILED);
-                }
-            } catch (Exception e) {
-                notification.setStatus(FileNotification.NotificationStatus.FAILED);
-            }
+            // REMOVED: Email sending logic - we'll send emails separately in FileServiceImpl
+            // Just mark as sent since we're sending email separately
+            notification.markAsSent();
 
             FileNotification savedNotification = fileNotificationRepository.save(notification);
             FileNotificationResponseDto responseDto = convertToDto(savedNotification);
@@ -73,7 +60,6 @@ public class FileNotificationServiceImpl implements FileNotificationService {
             return new ApiResponse<>(false, "Failed to create notification: " + e.getMessage(), null);
         }
     }
-
     @Override
     public void createExpiryNotification(File file, int daysUntilExpiry) {
         try {
