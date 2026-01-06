@@ -39,103 +39,89 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(
                         request -> request
-                                // Public endpoints - no authentication required
+                                // ========= PUBLIC ENDPOINTS =========
                                 .requestMatchers(
-                                        "/login",
-                                        "/register"
+                                        "/api/users/login"
 
                                 ).permitAll()
 
-                                // User Management - ADMIN only
+                                // ========= USER MANAGEMENT =========
+                                // ADMIN-only endpoints
                                 .requestMatchers(
-
-                                        "/users/{id}",
-                                        "/users/update/{id}",
-                                        "/users/delete/{id}"
-
+                                                     // GET all users
+                                                  // GET active users
+                                        "/api/users/inactive",
+                                        "/api/users/register"  ,// FIXED: Changed from /api/users/register/**// GET inactive users
+                                        "/api/users/active-kars",      // GET active KARs
+                                        "/api/users/active-kars/count",// GET active KARs count
+                                        "/api/users/with-assigned-files", // GET users with files
+                                        "/api/users/role/**",          // GET users by role
+                                        "/api/users/search",           // GET search users
+                                        "/api/users/deactivate/**",    // PUT deactivate user
+                                        "/api/users/activate/**",      // PUT activate user
+                                        "/api/users/delete/**",        // DELETE user (backward compat)
+                                        "/api/users/update/**"         // PUT update user
                                 ).hasRole("ADMIN")
 
+                                // USER can access their own profile
                                 .requestMatchers(
+                                        "/api/users/{username}",      // GET user by username
+                                        "/api/users/profile"          // GET user profile
+                                ).authenticated()
 
-                                        "/users"
-
-                                ).hasAnyRole("ADMIN", "USER")
-
-                                // File Management - Different access levels
+                                // ========= COMMERCIAL FILE MANAGEMENT =========
+                                // File endpoints - authenticated users
                                 .requestMatchers(
+                                        "/api/commercial-files",
+                                        "/api/commercial-files/**",
+                                        "/api/commercial-files/search",
+                                        "/api/commercial-files/my-files",
+                                        "/api/commercial-files/{id}",
                                         "/api/files/upload",
                                         "/api/files/update/**",
                                         "/api/files/delete/**",
-                                        "/api/files/version/**"
-                                ).hasAnyRole("ADMIN", "USER")
-
-                                .requestMatchers(
+                                        "/api/files/version/**",
                                         "/api/files/**",
-                                        "/api/files/{id}",
                                         "/api/files/search",
                                         "/api/files/expiring/**",
                                         "/api/files/expired",
                                         "/api/files/region/**",
                                         "/api/files/type/**",
-                                        "/api/files/my-files"
-                                ).hasAnyRole("ADMIN", "USER")
+                                        "/api/files/kar/**",
+                                        "/api/users/all",
+                                        "/api/users/active"
+                                        ).hasAnyRole("ADMIN", "USER", "SITE_ACQUISITION")
 
+                                // ========= REGION MANAGEMENT =========
                                 .requestMatchers(
-                                        "/api/files/kar/**"
-                                ).hasAnyRole("ADMIN", "USER")
-
-                                // Region Management - ADMIN only
-                                .requestMatchers(
-                                        "/api/regions",
                                         "/api/regions/**"
                                 ).hasAnyRole("ADMIN", "USER")
 
-                                // Channel Partner Type Management - ADMIN only
+                                // ========= CHANNEL PARTNER TYPES =========
                                 .requestMatchers(
-                                        "/api/channel-partner-types",
                                         "/api/channel-partner-types/**"
                                 ).hasAnyRole("ADMIN", "USER")
 
-                                // File History - ADMIN and KAR can view their file history
+                                // ========= FILE HISTORY =========
                                 .requestMatchers(
                                         "/api/file-history/file/**",
                                         "/api/file-history/user/**"
-                                ).hasAnyRole("ADMIN", "USER")
+                                ).hasAnyRole("ADMIN", "USER", "SITE_ACQUISITION")
 
-                                .requestMatchers(
-                                        "/api/file-history",
-                                        "/api/file-history/**"
-                                ).hasRole("ADMIN")
-
-                                // Notifications - Users can view their own notifications
+                                // ========= NOTIFICATIONS =========
                                 .requestMatchers(
                                         "/api/notifications/user/**",
                                         "/api/notifications/{id}/mark-read",
                                         "/api/notifications/user/{userId}/mark-all-read",
                                         "/api/notifications/user/{userId}/unread-count"
-                                ).hasAnyRole("ADMIN", "USER")
-
-                                .requestMatchers(
-                                        "/api/notifications",
-                                        "/api/notifications/file/**",
-                                        "/api/notifications/status/**",
-                                        "/api/notifications/pending"
-                                ).hasRole("ADMIN")
-
-                                // Test endpoints - ADMIN only in production, but open for testing
-                                .requestMatchers(
-                                        "/api/test/**"
-                                ).hasRole("ADMIN")
-
-                                // User profile - Authenticated users can view their own profile
-                                .requestMatchers(
-                                        "/api/users/profile"
                                 ).authenticated()
 
-                                // Any other request requires authentication
-                                .anyRequest()
-                                .authenticated()
-                ).userDetailsService(myUserDetailsService)
+                                // ========= TEST ENDPOINTS =========
+                                .requestMatchers("/api/test/**").hasRole("ADMIN")
+
+                                // ========= CATCH-ALL =========
+                                .anyRequest().authenticated()
+                )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

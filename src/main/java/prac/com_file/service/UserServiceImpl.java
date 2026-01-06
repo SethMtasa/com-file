@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-
 @Service
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
@@ -42,7 +41,7 @@ public class UserServiceImpl implements UserService {
                 )
         );
         Optional<User> user = userRepository.findByUsername(loginRequest.username());
-        if (user.isPresent()) {
+        if (user.isPresent() && user.get().isActiveStatus() && user.get().getEnabled()) {
             String token = jwtService.generateToken(user.get());
             return new AuthenticationResponse<>(true, "success", token);
         }
@@ -58,8 +57,9 @@ public class UserServiceImpl implements UserService {
 
         if (!validationResponse.success()) {
             Optional<User> existingUser = userRepository.findByUsername(username);
-            if (existingUser.isPresent() && !existingUser.get().isEnabled()) {
+            if (existingUser.isPresent() && !existingUser.get().isActiveStatus()) {
                 User user = existingUser.get();
+                user.setActiveStatus(true);
                 user.setEnabled(true);
                 userRepository.save(user);
                 return new AuthenticationResponse<>(true, "User activated successfully.", null);
@@ -78,6 +78,8 @@ public class UserServiceImpl implements UserService {
             user.setEmail(email);
             user.setUsername(username);
             user.setRole(userRole.get());
+            user.setActiveStatus(true);
+            user.setEnabled(true);
 
             try {
                 userRepository.save(user);
@@ -88,7 +90,6 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-
     @Override
     public ApiResponse<UserResponseDto> getUserById(Long id) {
         Optional<User> optionalUser = userRepository.findById(id);
@@ -98,26 +99,57 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse<UserResponseDto> getUserByUsername(String username, boolean activeStatus) {
-        Optional<User> optionalUser = userRepository.findByUsernameAndActiveStatus(username, activeStatus);
-        return optionalUser.map(user -> new ApiResponse<>(true, "User found", new UserResponseDto(user)))
-                .orElseGet(() -> new ApiResponse<>(false, "User not found with username: " + username, null));
+        Optional<User> optionalUser = userRepository.findByUsername(username);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            if ((activeStatus && user.isActiveStatus()) || !activeStatus) {
+                return new ApiResponse<>(true, "User found", new UserResponseDto(user));
+            }
+        }
+        return new ApiResponse<>(false, "User not found with username: " + username, null);
     }
 
-
     @Override
-    public ApiResponse<String> deleteUser(Long id) {
+    public ApiResponse<String> deactivateUser(Long id) {
         try {
             Optional<User> userOptional = userRepository.findById(id);
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
-                user.setEnabled(false);
-                userRepository.save(user);
-                return new ApiResponse<>(true, "User deleted successfully.", null);
+                if (user.isActiveStatus()) {
+                    user.setActiveStatus(false);
+                    user.setEnabled(false);
+                    userRepository.save(user);
+                    return new ApiResponse<>(true, "User deactivated successfully.", null);
+                } else {
+                    return new ApiResponse<>(false, "User is already inactive.", null);
+                }
             } else {
                 return new ApiResponse<>(false, "User not found.", null);
             }
         } catch (Exception e) {
-            return new ApiResponse<>(false, "Error deleting user: " + e.getMessage(), null);
+            return new ApiResponse<>(false, "Error deactivating user: " + e.getMessage(), null);
+        }
+    }
+
+    @Override
+    public ApiResponse<String> activateUser(Long id) {
+        try {
+            Optional<User> userOptional = userRepository.findById(id);
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
+                if (!user.isActiveStatus()) {
+                    user.setActiveStatus(true);
+                    user.setEnabled(true);
+                    userRepository.save(user);
+                    return new ApiResponse<>(true, "User activated successfully.", null);
+                } else {
+                    return new ApiResponse<>(false, "User is already active.", null);
+                }
+            } else {
+                return new ApiResponse<>(false, "User not found.", null);
+            }
+        } catch (Exception e) {
+            return new ApiResponse<>(false, "Error activating user: " + e.getMessage(), null);
         }
     }
 
@@ -131,6 +163,32 @@ public class UserServiceImpl implements UserService {
             return new ApiResponse<>(true, "Active users retrieved successfully", userDtos);
         } else {
             return new ApiResponse<>(false, "No active users found", null);
+        }
+    }
+
+    @Override
+    public ApiResponse<List<UserResponseDto>> getAllUsers() {
+        List<User> allUsers = userRepository.findAll();
+        if (!allUsers.isEmpty()) {
+            List<UserResponseDto> userDtos = allUsers.stream()
+                    .map(UserResponseDto::new)
+                    .collect(Collectors.toList());
+            return new ApiResponse<>(true, "All users retrieved successfully", userDtos);
+        } else {
+            return new ApiResponse<>(false, "No users found", null);
+        }
+    }
+
+    @Override
+    public ApiResponse<List<UserResponseDto>> getInactiveUsers() {
+        List<User> inactiveUsers = userRepository.findByActiveStatus(false);
+        if (!inactiveUsers.isEmpty()) {
+            List<UserResponseDto> userDtos = inactiveUsers.stream()
+                    .map(UserResponseDto::new)
+                    .collect(Collectors.toList());
+            return new ApiResponse<>(true, "Inactive users retrieved successfully", userDtos);
+        } else {
+            return new ApiResponse<>(false, "No inactive users found", null);
         }
     }
 
@@ -171,13 +229,45 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    public ApiResponse<String> deleteUser(Long id) {
+        // Keep for backward compatibility, but implement as deactivate
+        return deactivateUser(id);
+    }
+
+    // Unique methods for this project - implement these
+    @Override
+    public List<User> findAllActiveKARs() {
+        return userRepository.findAllActiveKARs();
+    }
+
+    @Override
+    public List<User> findByNameContainingIgnoreCase(String name) {
+        return userRepository.findByNameContainingIgnoreCase(name);
+    }
+
+    @Override
+    public List<User> findByRoleNameAndActiveStatus(String roleName) {
+        return userRepository.findByRoleNameAndActiveStatus(roleName);
+    }
+
+    @Override
+    public long countActiveKARs() {
+        return userRepository.countActiveKARs();
+    }
+
+    @Override
+    public List<User> findUsersWithAssignedFiles() {
+        return userRepository.findUsersWithAssignedFiles();
+    }
+
     private AuthenticationResponse<String> validateUser(String username, String email) {
         Optional<User> user = userRepository.findByUsername(username);
-        if (user.isPresent()) {
+        if (user.isPresent() && user.get().isActiveStatus()) {
             return new AuthenticationResponse<>(false, "Username already exists.", null);
         }
         Optional<User> emailUser = userRepository.findByEmail(email);
-        if (emailUser.isPresent()) {
+        if (emailUser.isPresent() && emailUser.get().isActiveStatus()) {
             return new AuthenticationResponse<>(false, "Email already exists.", null);
         }
         return new AuthenticationResponse<>(true, "", null);

@@ -24,20 +24,6 @@ spring:
       max-request-size: 30MB
 
 
-
-##   Email Configurations
-#  mail:
-#    host: 10.95.10.63
-#    port: 25
-#    username: CommercialFileManagement@netone.co.zw
-#    password: 'C0mm3rc!@lMgmnt2'
-#    properties.mail.smtp.auth: true
-#    properties.mail.smtp.starttls.enable: false
-#    properties.mail.smtp.starttls.required: false
-#    properties.mail.smtp.ssl.trust: 10.95.10.63
-#
-
-
 # Email Configurations
 mail:
   host: 10.95.110.23
@@ -61,7 +47,6 @@ notification:
   cron_expiring_soon: '0 0 */3 * * * '
   #  cron_expiring_soon: '* * * 1 * *'
 
-
 secret:
   key: 38EA0125C0F8C5DF8C5EABB1A834A88F5974D69839E02CABDC359F1BEAE4709B4DE5EE149463F86984A0F34CE6AD83E9313201CF2810208674E14D3A71FB16DF
 
@@ -76,7 +61,6 @@ file:
   upload:
     path: /Users/sethmtasa/Desktop/MyFiles
     allowed-types: pdf,doc,docx,xls,xlsx,csv,txt
-
 
 
 logging:

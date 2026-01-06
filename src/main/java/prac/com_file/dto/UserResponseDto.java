@@ -12,19 +12,24 @@ public class UserResponseDto {
     private String lastName;
     private String email;
     private RoleResponseDto role;
+    private boolean activeStatus;
+    private boolean enabled;
 
     // No-args constructor
     public UserResponseDto() {
     }
 
     // All-args constructor
-    public UserResponseDto(Long id, String username, String firstName, String lastName, String email, RoleResponseDto role) {
+    public UserResponseDto(Long id, String username, String firstName, String lastName, String email,
+                           RoleResponseDto role, boolean activeStatus, boolean enabled) {
         this.id = id;
         this.username = username;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.role = role;
+        this.activeStatus = activeStatus;
+        this.enabled = enabled;
     }
 
     // Constructor from entity
@@ -36,6 +41,8 @@ public class UserResponseDto {
         this.email = user.getEmail();
         // Assuming you have a RoleResponseDto, which is necessary to avoid recursion.
         this.role = new RoleResponseDto(user.getRole());
+        this.activeStatus = user.isActiveStatus();
+        this.enabled = user.getEnabled();
     }
 
     // Getters
@@ -63,6 +70,14 @@ public class UserResponseDto {
         return role;
     }
 
+    public boolean isActiveStatus() {
+        return activeStatus;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
     // Setters
     public void setId(Long id) {
         this.id = id;
@@ -86,5 +101,13 @@ public class UserResponseDto {
 
     public void setRole(RoleResponseDto role) {
         this.role = role;
+    }
+
+    public void setActiveStatus(boolean activeStatus) {
+        this.activeStatus = activeStatus;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

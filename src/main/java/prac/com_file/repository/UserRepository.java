@@ -25,7 +25,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.role.name = 'KAR' AND u.activeStatus = true")
     List<User> findAllActiveKARs();
 
-    @Query("SELECT u FROM User u WHERE LOWER(u.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :name, '%')) AND u.activeStatus = true")
+    @Query("SELECT u FROM User u WHERE (LOWER(u.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :name, '%'))) AND u.activeStatus = true")
     List<User> findByNameContainingIgnoreCase(@Param("name") String name);
 
     @Query("SELECT u FROM User u WHERE u.role.name = :roleName AND u.activeStatus = true")
@@ -40,4 +40,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u WHERE u.id IN (SELECT DISTINCT f.assignedKAR.id FROM File f WHERE f.activeStatus = true)")
     List<User> findUsersWithAssignedFiles();
+
+    // Keep existing methods and add these for backward compatibility
+    default List<User> findByActiveStatusAndUsername(String username, boolean activeStatus) {
+        Optional<User> user = findByUsername(username);
+        if (user.isPresent() && user.get().isActiveStatus() == activeStatus) {
+            return List.of(user.get());
+        }
+        return List.of();
+    }
 }

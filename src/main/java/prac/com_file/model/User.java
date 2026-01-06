@@ -1,6 +1,5 @@
 package prac.com_file.model;
 
-
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import org.hibernate.envers.Audited;
@@ -23,7 +22,6 @@ public class User extends BaseEntity implements UserDetails {
 
     @Column(nullable = false)
     private String email;
-
 
     @Column(nullable = false)
     private String firstName;
@@ -88,6 +86,7 @@ public class User extends BaseEntity implements UserDetails {
     }
 
     public void setRole(Optional<Role> newRole) {
+        this.role = newRole.orElse(null);
     }
 
     public static abstract class Meta {
@@ -103,7 +102,7 @@ public class User extends BaseEntity implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority( "ROLE_" + getRole().getName()));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + (getRole() != null ? getRole().getName() : "USER")));
     }
 
     @Override
@@ -128,6 +127,6 @@ public class User extends BaseEntity implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return this.enabled && this.isActiveStatus();
     }
 }

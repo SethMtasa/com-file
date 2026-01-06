@@ -1,8 +1,7 @@
 package prac.com_file.service;
 
-
-//import prac.file.dto.*;
 import prac.com_file.dto.*;
+import prac.com_file.model.User;
 
 import java.util.List;
 
@@ -24,13 +23,6 @@ public interface UserService {
      */
     AuthenticationResponse<String>  registerUser(RegistrationRequest registrationRequest);
 
-
-    /**
-     * Retrieves a list of all users.
-     * @return ApiResponse containing a list of UserResponseDto.
-     */
-    ApiResponse<List<UserResponseDto>> getAllActiveUsers();
-
     /**
      * Retrieves a user by their ID.
      * @param id The ID of the user.
@@ -43,8 +35,40 @@ public interface UserService {
      * @param username The username of the user.
      * @return ApiResponse containing the UserResponseDto.
      */
-
     ApiResponse<UserResponseDto> getUserByUsername(String username, boolean activeStatus);
+
+    /**
+     * Deactivates a user (soft delete).
+     * @param id The ID of the user to deactivate.
+     * @return ApiResponse indicating success or failure.
+     */
+    ApiResponse<String> deactivateUser(Long id);
+
+    /**
+     * Activates a previously deactivated user.
+     * @param id The ID of the user to activate.
+     * @return ApiResponse indicating success or failure.
+     */
+    ApiResponse<String> activateUser(Long id);
+
+    /**
+     * Retrieves a list of all active users.
+     * @return ApiResponse containing a list of UserResponseDto.
+     */
+    ApiResponse<List<UserResponseDto>> getAllActiveUsers();
+
+    /**
+     * Retrieves a list of all users (both active and inactive).
+     * @return ApiResponse containing a list of UserResponseDto.
+     */
+    ApiResponse<List<UserResponseDto>> getAllUsers();
+
+    /**
+     * Retrieves a list of all inactive users.
+     * @return ApiResponse containing a list of UserResponseDto.
+     */
+    ApiResponse<List<UserResponseDto>> getInactiveUsers();
+
     /**
      * Updates an existing user.
      * @param id The ID of the user to update.
@@ -53,12 +77,21 @@ public interface UserService {
      */
     ApiResponse<UserResponseDto> updateUser(Long id, RegistrationRequest editUserRequest);
 
-
-
     /**
-     * Deletes a user by their ID.
+     * Deletes a user by their ID (kept for backward compatibility).
      * @param id The ID of the user to delete.
      * @return ApiResponse indicating success or failure.
      */
     ApiResponse<String> deleteUser(Long id);
+
+    // Unique methods for this project - keep these as they are
+    List<User> findAllActiveKARs();
+
+    List<User> findByNameContainingIgnoreCase(String name);
+
+    List<User> findByRoleNameAndActiveStatus(String roleName);
+
+    long countActiveKARs();
+
+    List<User> findUsersWithAssignedFiles();
 }
